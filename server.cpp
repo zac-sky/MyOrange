@@ -1,12 +1,15 @@
-#include <sys/socket.h>    // socket, bind ...
-#include <netinet/in.h>    // (TCP/IP) sockaddr_in, htons...
-#include <arpa/inet.h>     // inet_addr()...
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <map>
 
-#include "database.h"
+#include "sds.h"
+#include "db.h"
+
 
 #define PORT 6666
 #define BUFFER_SIZE 1024
@@ -28,21 +31,8 @@ int main() {
     memset(&server_address, 0, sizeof(server_address));
     server_address.sin_family = AF_INET;
     server_address.sin_port = htons(PORT);
-    server_address.sin_addr.s_addr = INADDR_ANY; // INADDR_ANY:表示服务器将绑定到所有可用的网络接口上
-    /* 在追溯这个s_addr... 
-        typedef uint32_t in_addr_t;
-        struct in_addr
-        {  
-            in_addr_t s_addr;
-        };
+    server_address.sin_addr.s_addr = INADDR_ANY;
 
-        struct sockaddr_in {
-            short sin_family;  // 地址族 (AF_INET)
-            unsigned short sin_port;    // 端口号 (使用 htons() 来转换字节序)
-            struct in_addr sin_addr;    // IP 地址
-            char sin_zero[8];
-        };
-    */   
     // 绑定 socket
     if (bind(sockfd, (struct sockaddr *)&server_address, sizeof(server_address)) < 0) {
         perror("Bind error");
@@ -63,16 +53,16 @@ int main() {
 
     // 接收客户端数据
     while (1) {
-        memset(buffer, 0, BUFFER_SIZE);  // 给前 SIZE 个元素赋值 0
+        memset(buffer, 0, BUFFER_SIZE);
         int n = recv(newsockfd, buffer, BUFFER_SIZE - 1, 0);
-        if (n <= 0) break;  // 检查接收的字节数
+        if (n <= 0) break;
 
-        buffer[n] = '\0';  // 添加字符串结束符
+        buffer[n] = '\0';
         printf("Received command: %s", buffer);
-        process_command(buffer);  // 处理接收到的命令
+        process_command(buffer);
     }
 
-    close(newsockfd);  // 关闭客户端 socket
-    close(sockfd);     // 关闭服务器 socket
+    close(newsockfd);
+    close(sockfd);
     return 0;
 }
